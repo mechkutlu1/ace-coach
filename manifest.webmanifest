@@ -1,0 +1,17 @@
+{
+  "name": "Ace Coach — Tennis Stroke Trainer",
+  "short_name": "Ace Coach",
+  "description": "Real-time tennis stroke coaching using your phone camera. Detects forehand and backhand and gives posture feedback.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B1F1A",
+  "theme_color": "#0B1F1A",
+  "categories": ["sports", "education", "health"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
