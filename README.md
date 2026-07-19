@@ -15,20 +15,6 @@ extension, follow-through and posture. No build step, no dependencies to install
 | `sw.js` | Service worker — offline relaunch + faster second load. |
 | `icon-*.png`, `apple-touch-icon.png` | App icons. | Optional Colab pipeline: app samples → Keras `.h5` → TensorFlow.js. |
 
-## Deploy to GitHub Pages
-
-1. Create a new **public** repository, e.g. `ace-coach`.
-2. Upload **the contents of this folder** to the repository root (so `index.html`
-   sits at the top level, not inside a sub-folder).
-3. Repo **Settings → Pages** → *Build and deployment* → **Deploy from a branch**
-   → branch `main`, folder `/ (root)` → **Save**.
-4. Wait ~1 minute. Your app is live at
-   `https://<your-username>.github.io/ace-coach/`.
-
-HTTPS is required for the camera — GitHub Pages provides it automatically, so it
-just works. (Opening `index.html` from your local disk will **not** get camera
-access in most browsers; deploy it, or serve it over a local HTTPS server.)
-
 ## Install on the phone
 
 Open the Pages URL on the phone, then:
