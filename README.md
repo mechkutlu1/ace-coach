@@ -15,6 +15,20 @@ extension, follow-through and posture. No build step, no dependencies to install
 | `sw.js` | Service worker — offline relaunch + faster second load. |
 | `icon-*.png`, `apple-touch-icon.png` | App icons. | Optional Colab pipeline: app samples → Keras `.h5` → TensorFlow.js. |
 
+## Deploy to GitHub Pages
+
+1. Create a new **public** repository, e.g. `ace-coach`.
+2. Upload **the contents of this folder** to the repository root (so `index.html`
+   sits at the top level, not inside a sub-folder).
+3. Repo **Settings → Pages** → *Build and deployment* → **Deploy from a branch**
+   → branch `main`, folder `/ (root)` → **Save**.
+4. Wait ~1 minute. Your app is live at
+   `https://<your-username>.github.io/ace-coach/`.
+
+HTTPS is required for the camera — GitHub Pages provides it automatically, so it
+just works. (Opening `index.html` from your local disk will **not** get camera
+access in most browsers; deploy it, or serve it over a local HTTPS server.)
+
 ## Install on the phone
 
 Open the Pages URL on the phone, then:
@@ -27,14 +41,22 @@ Launch it from the home-screen icon and it runs full-screen like a native app.
 ## Using it
 
 1. Tap **Start camera** and allow access. First launch downloads the pose model
-   (a few MB) from the jsDelivr CDN — after that the service worker keeps it cached.
-2. In **Settings** (gear icon), set the **racket hand** and **backhand style**,
-   and adjust **sensitivity** (lower for a small child / gentle swings).
-3. Prop the phone up, stand back so the **whole body is in frame**, face the
-   camera, and swing. The coach scores each swing and speaks one fix.
+   (a few MB) from the jsDelivr CDN; after that it is cached.
+2. Pick a drill at the top — **Rally** scores every stroke, **Forehand** or
+   **Backhand** scores only that stroke.
+3. In **Settings** (button under the video) set the **racket hand**, **backhand
+   style**, **forehand/backhand swap** (if the labels come out reversed), and
+   **sensitivity** (lower for a small child / gentle swings).
+4. Prop the phone up, stand back so the **whole body is in frame**, face the
+   camera, and swing.
 
-The coloured dots on the skeleton (knees, elbow, posture) update live, so posture
-feedback is continuous — not only after a completed swing.
+Each swing is detected, scored 0–100, and logged in **Swing notes** with a score
+bar, a per-checkpoint breakdown (knees, turn, contact, extend, finish, posture),
+and one spoken fix. The ring shows live swing speed with the swing count in the
+centre; the top banner shows the live phase (ready, swing, follow-through).
+
+The coloured joints on the skeleton (knees, racket elbow, torso) update live, so
+posture feedback is continuous.
 
 
 ## Notes
