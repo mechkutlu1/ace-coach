@@ -218,6 +218,15 @@
       </div>
 
       <div class="field">
+        <label>Forehand / backhand labelling</label>
+        <div class="seg" id="fbSeg">
+          <button data-v="auto" class="sel">Auto-detect</button>
+          <button data-v="swap">Swap</button>
+        </div>
+        <div class="mini">If the coach calls your forehands “backhand” (or the reverse) for your camera angle, tap Swap to flip them.</div>
+      </div>
+
+      <div class="field">
         <label>Swing sensitivity — <span id="sensVal">medium</span></label>
         <input type="range" min="0" max="100" value="50" class="slider" id="sens" />
         <div class="mini">Lower it for a small child or gentle practice swings; raise it if light movements trigger false swings.</div>
@@ -256,6 +265,7 @@ const L = { // landmark indices we use
 const cfg = {
   hand: "right",        // dominant racket hand
   bhStyle: "auto",      // one | two | auto
+  swapFB: false,        // manually flip forehand/backhand labelling
   voice: true,
   sensitivity: 0.5,     // 0..1
 };
@@ -406,6 +416,7 @@ function evaluateStroke(buf){
   const domDir = Math.sign(domShX - centerX) || 1;           // which side the racket shoulder is on
   const wristSide = Math.sign(domWrist(load).x - centerX) || domDir;
   let stroke = (wristSide===domDir) ? "Forehand" : "Backhand";
+  if (cfg.swapFB) stroke = (stroke==="Forehand") ? "Backhand" : "Forehand";
 
   // two-handed test
   const handGap = frames.reduce((s,f)=>s+dist(f.p[L.Lwr],f.p[L.Rwr]),0)/frames.length/shW;
@@ -646,6 +657,7 @@ function seg(id, cb){
 }
 seg("#handSeg", v=>cfg.hand=v);
 seg("#bhSeg",  v=>cfg.bhStyle=v);
+seg("#fbSeg",  v=>cfg.swapFB=(v==="swap"));
 seg("#voiceSeg",v=>{ cfg.voice=v==="on"; $("#voiceBtn").classList.toggle("on",cfg.voice); });
 function syncVoiceSeg(){ const s=$("#voiceSeg"); [...s.children].forEach(b=>b.classList.toggle("sel",(b.dataset.v==="on")===cfg.voice)); }
 

@@ -3,7 +3,7 @@
    - CDN (MediaPipe wasm/model, fonts): NETWORK-FIRST, cache only as an offline
      fallback. This is the key fix — it can never get stuck serving a stale or
      broken MediaPipe download. */
-const CACHE = "ace-coach-v4";
+const CACHE = "ace-coach-v5";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest",
                "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
