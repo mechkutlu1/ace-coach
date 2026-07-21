@@ -149,6 +149,24 @@
   .seg button.sel{background:var(--accent);color:#0B1F1A;opacity:1}
   .slider{width:100%;accent-color:var(--accent)}
   .mini{font-size:.72rem;color:var(--chalk-dim);line-height:1.5;margin-top:6px}
+
+  /* coach demo card (floating stroke reference) */
+  .coach-card{position:absolute;top:3.4rem;right:.7rem;width:172px;border-radius:14px;z-index:3;
+    background:rgba(8,26,21,.82);backdrop-filter:blur(8px);border:1px solid rgba(244,247,240,.14);
+    padding:10px 10px 9px;display:flex;flex-direction:column;gap:7px;box-shadow:0 8px 28px -10px rgba(0,0,0,.7)}
+  .coach-card.hidden{display:none}
+  @media (max-width:420px){.coach-card{width:150px;top:3rem;right:.5rem}}
+  .coach-card-head{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
+  .coach-tag{font-size:.58rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--chalk-dim)}
+  .coach-name{font-family:var(--display);font-weight:800;font-size:.9rem;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);line-height:1}
+  .coach-demo{width:100%;aspect-ratio:300/236;background:rgba(215,255,60,.04);border-radius:9px;border:1px solid rgba(244,247,240,.08)}
+  .coach-phases{display:grid;grid-template-columns:repeat(4,1fr);gap:3px}
+  .coach-phase{text-align:center;font-size:.53rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;
+    padding:4px 0 3px;border-radius:0 0 5px 5px;border-top:2px solid rgba(244,247,240,.16);color:var(--chalk-dim);transition:color .2s,border-color .2s,background .2s}
+  .coach-phase.on{border-top-color:var(--accent);color:var(--chalk);background:var(--accent-soft)}
+  .coach-checks{display:flex;flex-wrap:wrap;gap:3px 8px}
+  .coach-chk{display:inline-flex;align-items:center;gap:4px;font-size:.53rem;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--chalk-dim)}
+  .coach-chk .d{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none;box-shadow:0 0 5px var(--accent-soft)}
 </style>
 </head>
 <body data-focus="rally">
@@ -196,6 +214,17 @@
 
       <div class="hud hud-phase"><span class="phase-dot" aria-hidden="true"></span><span id="phaseText">Camera off</span></div>
 
+      <div class="coach-card hidden" id="coachCard" aria-hidden="true">
+        <div class="coach-card-head"><span class="coach-tag">Coach</span><span class="coach-name" id="coachName">Forehand</span></div>
+        <canvas class="coach-demo" id="demoCanvas" width="300" height="236"></canvas>
+        <div class="coach-phases" id="coachPhases">
+          <span class="coach-phase">Ready</span><span class="coach-phase">Load</span><span class="coach-phase">Contact</span><span class="coach-phase">Finish</span>
+        </div>
+        <div class="coach-checks">
+          <span class="coach-chk"><span class="d"></span>Knees</span><span class="coach-chk"><span class="d"></span>Turn</span><span class="coach-chk"><span class="d"></span>Contact</span><span class="coach-chk"><span class="d"></span>Extend</span><span class="coach-chk"><span class="d"></span>Finish</span><span class="coach-chk"><span class="d"></span>Posture</span>
+        </div>
+      </div>
+
       <div class="stage-empty" id="stageEmpty">
         <svg class="empty-figure" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="14" r="6"/><path d="M32 20 L32 40 M32 40 L24 56 M32 40 L40 56 M32 26 L18 30 M32 26 L46 30"/></svg>
         <p id="emptyMsg">Prop the phone up and stand back so your whole body fits in the frame. Face the camera and swing.</p>
@@ -236,6 +265,9 @@
         <div class="mini">Lower it for a small child or gentle practice swings; raise it if light movements trigger false swings.</div></div>
       <div class="field"><label>Voice coaching</label>
         <div class="seg" id="voiceSeg"><button data-v="on" class="sel">On</button><button data-v="off">Off</button></div></div>
+      <div class="field"><label>Coach demo card</label>
+        <div class="seg" id="coachSeg"><button data-v="on" class="sel">On</button><button data-v="off">Off</button></div>
+        <div class="mini">A floating figure demonstrates the selected stroke while you train — the phase it’s in and the checkpoints being scored. In Rally it alternates forehand and backhand.</div></div>
       <button class="btn btn-primary" id="closeSetup" style="width:100%;margin-top:8px">Done</button>
     </div>
   </div>
@@ -261,7 +293,7 @@ const CHECKS = [
   {id:"contact", label:"Contact"}, {id:"extend", label:"Extend"},
   {id:"finish",  label:"Finish"},  {id:"posture",label:"Posture"} ];
 
-const cfg = { hand:"right", bhStyle:"auto", swapFB:false, focus:"rally", voice:true, sensitivity:0.5 };
+const cfg = { hand:"right", bhStyle:"auto", swapFB:false, focus:"rally", voice:true, sensitivity:0.5, coachDemo:true };
 
 /* ---------- elements ---------- */
 const $ = s => document.querySelector(s);
@@ -271,6 +303,82 @@ const phaseEl=$("#phaseText"), coachList=$("#coachList"), romRing=$("#romRing"),
 const stageEmpty=$("#stageEmpty"), emptyMsg=$("#emptyMsg");
 const startBtn=$("#startBtn"), stopBtn=$("#stopBtn"), flipBtn=$("#flipBtn"), resetBtn=$("#resetBtn"), setupBtn=$("#setupBtn");
 const RING_C = 2*Math.PI*52;
+
+/* ============================================================
+   Coach demo card — animated stroke reference figure.
+   Loops a stick figure through Ready → Load → Contact → Finish
+   for the selected stroke; in Rally it alternates FH / BH.
+   ============================================================ */
+const demoCanvas=$("#demoCanvas"), coachCard=$("#coachCard"), coachName=$("#coachName"), coachPhases=$("#coachPhases");
+const COACH = {
+  strokes:{
+    forehand:{ name:"Forehand", frames:[[820,"R",0],[240,"FL",1],[520,"FC",2],[440,"FF",3]] },
+    backhand:{ name:"Backhand", frames:[[820,"R",0],[240,"BL",1],[520,"BC",2],[440,"BF",3]] } },
+  cycle:["forehand","backhand"],
+  poses:{
+    R:  {head:[50,13],neck:[50,25],hip:[50,55],elA:[56,37],wrA:[55,46],elB:[44,37],wrB:[45,46],knF:[57,73],anF:[59,92],knR:[43,73],anR:[41,92]},
+    FL: {head:[52,13],neck:[52,25],hip:[47,55],elA:[68,34],wrA:[78,41],elB:[52,38],wrB:[58,44],knF:[60,72],anF:[66,92],knR:[38,73],anR:[30,92]},
+    FC: {head:[48,13],neck:[49,25],hip:[50,54],elA:[42,43],wrA:[30,45],elB:[50,42],wrB:[52,49],knF:[60,72],anF:[64,92],knR:[42,73],anR:[36,92]},
+    FF: {head:[46,14],neck:[47,25],hip:[49,54],elA:[45,27],wrA:[37,15],elB:[52,40],wrB:[53,45],knF:[57,72],anF:[61,92],knR:[43,73],anR:[39,92]},
+    BL: {head:[48,13],neck:[48,25],hip:[53,55],elA:[40,35],wrA:[30,42],elB:[44,38],wrB:[36,44],knF:[40,72],anF:[34,92],knR:[62,73],anR:[70,92]},
+    BC: {head:[50,13],neck:[51,25],hip:[49,54],elA:[58,43],wrA:[72,46],elB:[52,42],wrB:[60,48],knF:[42,72],anF:[38,92],knR:[60,73],anR:[66,92]},
+    BF: {head:[52,14],neck:[53,25],hip:[51,54],elA:[56,27],wrA:[65,15],elB:[50,40],wrB:[52,45],knF:[43,72],anF:[39,92],knR:[59,73],anR:[63,92]} } };
+const canim = { i:0, t0:0, from:null, cyc:0, phaseIdx:0, stroke:"forehand", prevWr:null, v:0 };
+let coachRaf=0;
+const ease=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+const clamp01=t=>Math.max(0,Math.min(1,t));
+function lerpPose(a,b,t){ const o={}; for(const k in a){ o[k]=[a[k][0]+(b[k][0]-a[k][0])*t,a[k][1]+(b[k][1]-a[k][1])*t]; } return o; }
+
+function drawRacket(c,elpx,wrpx,s,color,glow){
+  let dx=wrpx[0]-elpx[0],dy=wrpx[1]-elpx[1]; const d=Math.hypot(dx,dy)||1; dx/=d; dy/=d;
+  const hx=wrpx[0]+dx*8.5*s, hy=wrpx[1]+dy*8.5*s;
+  c.strokeStyle=color; c.lineWidth=1.4*s;
+  c.beginPath(); c.moveTo(wrpx[0],wrpx[1]); c.lineTo(hx-dx*7*s,hy-dy*7*s); c.stroke();
+  c.save(); c.translate(hx,hy); c.rotate(Math.atan2(dy,dx));
+  if(glow){ c.shadowColor=color; c.shadowBlur=7*s; }
+  c.beginPath(); c.ellipse(0,0,7*s,5*s,0,0,7); c.stroke();
+  c.shadowBlur=0; c.globalAlpha=.5; c.lineWidth=.6*s;
+  c.beginPath(); c.moveTo(-3*s,-4*s); c.lineTo(-3*s,4*s); c.moveTo(1.5*s,-4.6*s); c.lineTo(1.5*s,4.6*s); c.stroke();
+  c.globalAlpha=1; c.restore();
+}
+function drawCoach(k,hot){
+  const cv=demoCanvas; if(!cv) return; const c=cv.getContext("2d"); const W=cv.width,H=cv.height;
+  c.clearRect(0,0,W,H); c.save();
+  if(cfg.hand==="left"){ c.translate(W,0); c.scale(-1,1); }
+  const s=Math.min(W/78,H/98), ox=W/2-50*s, oy=(H-92*s)/2;
+  const P=n=>[ox+k[n][0]*s, oy+k[n][1]*s];
+  c.strokeStyle="rgba(215,255,60,.13)"; c.lineWidth=Math.max(1,.4*s);
+  c.beginPath(); c.moveTo(ox+6*s,oy+93.5*s); c.lineTo(ox+96*s,oy+93.5*s); c.stroke();
+  c.lineCap="round"; c.lineJoin="round"; c.strokeStyle="rgba(244,247,240,.72)"; c.lineWidth=2.1*s;
+  const seg=(a,b)=>{ const A=P(a),B=P(b); c.beginPath(); c.moveTo(A[0],A[1]); c.lineTo(B[0],B[1]); c.stroke(); };
+  seg("neck","hip"); seg("hip","knR"); seg("knR","anR"); seg("hip","knF"); seg("knF","anF");
+  seg("neck","elB"); seg("elB","wrB"); seg("neck","elA"); seg("elA","wrA");
+  const hd=P("head"); c.fillStyle="rgba(244,247,240,.72)"; c.beginPath(); c.arc(hd[0],hd[1],3.6*s,0,7); c.fill();
+  drawRacket(c,P("elA"),P("wrA"),s,"#D7FF3C",hot);
+  c.fillStyle="#D7FF3C"; const wb=P("wrB"); c.beginPath(); c.arc(wb[0],wb[1],1.6*s,0,7); c.fill();
+  c.restore();
+}
+function renderCoachPhases(){ [...coachPhases.children].forEach((el,i)=>el.classList.toggle("on",i===canim.phaseIdx)); }
+function setCoachName(){ coachName.textContent=COACH.strokes[canim.stroke].name; }
+function coachTick(now){
+  let stk=COACH.strokes[canim.stroke];
+  if(!canim.from){ canim.from=COACH.poses.R; canim.t0=now; }
+  let fr=stk.frames[canim.i]; let t=(now-canim.t0)/fr[0];
+  if(t>=1){
+    canim.from=COACH.poses[fr[1]]; canim.i++; canim.t0=now; t=0;
+    if(canim.i>=stk.frames.length){ canim.i=0;
+      if(cfg.focus==="rally"){ canim.cyc++; canim.stroke=COACH.cycle[canim.cyc%2]; setCoachName(); } }
+    const nf=COACH.strokes[canim.stroke].frames[canim.i];
+    if(nf[2]!==canim.phaseIdx){ canim.phaseIdx=nf[2]; renderCoachPhases(); }
+  }
+  stk=COACH.strokes[canim.stroke]; fr=stk.frames[canim.i];
+  const k=lerpPose(canim.from,COACH.poses[fr[1]],ease(clamp01(t)));
+  drawCoach(k, fr[2]===2);
+  coachRaf=requestAnimationFrame(coachTick);
+}
+function resetCoach(){ canim.stroke=cfg.focus==="backhand"?"backhand":"forehand"; canim.i=0; canim.cyc=0; canim.phaseIdx=0; canim.from=null; canim.t0=0; setCoachName(); renderCoachPhases(); }
+function startCoach(){ if(!cfg.coachDemo){ coachCard.classList.add("hidden"); return; } resetCoach(); coachCard.classList.remove("hidden"); if(!coachRaf) coachRaf=requestAnimationFrame(coachTick); }
+function stopCoach(){ coachCard.classList.add("hidden"); if(coachRaf){ cancelAnimationFrame(coachRaf); coachRaf=0; } }
 
 const app = { landmarker:null, running:false, stream:null, facing:"user", mirrored:true,
   count:0, scores:[], byStroke:{Forehand:0,Backhand:0}, lastVideoTime:-1 };
@@ -498,6 +606,7 @@ async function startCamera(){
     app.running=true; sw.phase="IDLE"; sw.lastWrist=null; sw.vEMA=0;
     stageEmpty.classList.add("hidden"); stopBtn.disabled=false; flipBtn.disabled=false;
     phaseEl.textContent="Ready — swing";
+    startCoach();
     requestAnimationFrame(loop);
   }catch(err){
     app.running=false; startBtn.textContent="Start camera";
@@ -512,6 +621,7 @@ function stopCamera(){
   ctx.clearRect(0,0,overlay.width,overlay.height);
   phaseEl.textContent="Camera off"; startBtn.textContent="Start camera";
   stopBtn.disabled=true; flipBtn.disabled=true; stageEmpty.classList.remove("hidden");
+  stopCoach();
 }
 let loopToken=0;
 function loop(){
@@ -554,6 +664,7 @@ seg("#handSeg", v=>cfg.hand=v);
 seg("#bhSeg",  v=>cfg.bhStyle=v);
 seg("#fbSeg",  v=>cfg.swapFB=(v==="swap"));
 seg("#voiceSeg", v=>cfg.voice=(v==="on"));
+seg("#coachSeg", v=>{ cfg.coachDemo=(v==="on"); if(app.running){ if(cfg.coachDemo) startCoach(); else stopCoach(); } });
 $("#sens").addEventListener("input",e=>{ cfg.sensitivity=e.target.value/100;
   $("#sensVal").textContent=cfg.sensitivity<.34?"gentle":cfg.sensitivity<.67?"medium":"lively"; });
 
@@ -561,6 +672,7 @@ document.querySelectorAll(".picker .card").forEach(card=>{
   card.addEventListener("click",()=>{
     document.querySelectorAll(".picker .card").forEach(c=>c.classList.remove("is-active"));
     card.classList.add("is-active"); cfg.focus=card.dataset.focus; document.body.dataset.focus=cfg.focus;
+    if(app.running) startCoach();
   });
 });
 window.addEventListener("resize",()=>{ if(app.running) fitCanvas(); });
